@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 #
-# Example that shows the full range of the current liquidity distribution
-# in the 0.3% USDC/ETH pool using data from the Arbitrum Uniswap v3 subgraph.
+# Example that shows the full range of the current liquidity distribution of Arbitrum chain
+# in the 0.05% ETH/USDC pool using data from the Uniswap v3 subgraph.
 #
 
 from gql import gql, Client
@@ -11,9 +11,9 @@ import math
 import sys
 
 
-# 0.05% Arbitrum chain USDC/ETH pool
+# 0.05% Arbitrum chain ETH/USDC pool
 POOL_ID = "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443"
-# 0.3% Arbitrum chain USDC/ETH pool
+# 0.3% Arbitrum chain ETH/USDC pool
 # POOL_ID = "0x17c14d2c404d167802b16c450d3c99f88f2c4f4d"
 
 # if passed in command line, use an alternative pool ID
@@ -62,7 +62,6 @@ def fee_tier_to_tick_spacing(fee_tier):
 
 client = Client(
     transport=RequestsHTTPTransport(
-        # url='https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
         url='https://api.thegraph.com/subgraphs/name/messari/uniswap-v3-arbitrum',
         verify=True,
         retries=5,
@@ -115,10 +114,6 @@ except Exception as ex:
 
 # Start from zero; if we were iterating from the current tick, would start from the pool's total liquidity
 liquidity = 0
-
-# Find the boundaries of the price range
-# min_tick = min(tick_mapping.keys())
-# max_tick = max(tick_mapping.keys())
 
 # Compute the tick range. This code would work as well in Python: `current_tick // tick_spacing * tick_spacing`
 # However, using floor() is more portable.
@@ -176,8 +171,6 @@ for tick in sorted_tick_list:
 
         # Print the real amounts of the two assets needed to be swapped to move out of the current tick range
         current_sqrt_price = tick_to_price(current_tick / 2)
-        # amount0actual = liquidity_delta * (sb - current_sqrt_price) / (current_sqrt_price * sb)
-        # amount1actual = liquidity_delta * (current_sqrt_price - sa)
         amount0actual = liquidity * (sb - current_sqrt_price) / (current_sqrt_price * sb)
         amount1actual = liquidity * (current_sqrt_price - sa)
         adjusted_amount0actual = amount0actual / (10 ** decimals0)
@@ -192,7 +185,6 @@ for tick in sorted_tick_list:
 
     else:
         # Compute the amounts of tokens potentially in the range
-        # amount1 = liquidity_delta * (sb - sa)
         amount1 = liquidity * (sb - sa)
         amount0 = amount1 / (sb * sa)
 
@@ -207,4 +199,3 @@ for tick in sorted_tick_list:
 
 print("In total: {:.2f} ETH and {:.2f} USDC".format(
     total_amount0 / 10 ** decimals0, total_amount1 / 10 ** decimals1))
-# print("Total liquidity: {}".format(liquidity))
