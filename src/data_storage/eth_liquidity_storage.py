@@ -221,7 +221,7 @@ def insert_into_db(insert_data):
          %(tick_spacing)s, %(token0)s, %(token1)s, %(decimals0)s, %(decimals1)s, %(bottom_tick)s, %(top_tick)s,
          %(liquidity_net)s, %(liquidity)s, %(bottom_price)s, %(top_price)s, %(locked_amount0)s, %(locked_amount1)s,
          %(is_current_tick)s) """
-    insert_count = db.execute_many(sql, insert_data)
+    insert_count = db.execute_many(sql, insert_data)[0]
     return insert_count
 
 
