@@ -56,43 +56,45 @@ def fee_tier_to_tick_spacing(fee_tier):
     }.get(fee_tier, 60)
 
 
-def get_pool_info(pool_id):
+def get_pool_info(date, pool_id):
     # get pool info
-    pool_query = """query get_pools($pool_id: ID!) {
-        pools(where: {id: $pool_id}) {
+    pool_query = """query get_pools($pool_id: ID!, $date: Int) {
+        poolDayDatas(where: {pool: $pool_id, date: $date}) {
             tick
-            sqrtPrice
-            liquidity
-            feeTier
-            token0 {
-              symbol
-              decimals
-            }
-            token1 {
-              symbol
-              decimals
+            pool {
+                feeTier
+                token0 {
+                    symbol
+                    decimals
+                }
+                token1 {
+                    symbol
+                    decimals
+                }
             }
         }
     }"""
+
+    ts = date_to_utc_timestamp(date)
     try:
         pool_info = EthPoolInfo(pool_id)
 
-        variables = {"pool_id": pool_id}
+        variables = {"pool_id": pool_id, "date": ts}
         response = client.execute(gql(pool_query), variable_values=variables)
 
-        if len(response['pools']) == 0:
+        if len(response['poolDayDatas']) == 0:
             logging.error("pool not found, pool_id: ", pool_id)
             exit(-1)
 
-        pool = response['pools'][0]
-        pool_info.current_tick = int(pool["tick"])
-        pool_info.fee_tier = int(pool["feeTier"])
+        pool_data = response['poolDayDatas'][0]
+        pool_info.current_tick = int(pool_data["tick"])
+        pool_info.fee_tier = int(pool_data["pool"]["feeTier"])
         pool_info.tick_spacing = fee_tier_to_tick_spacing(pool_info.fee_tier)
 
-        pool_info.token0 = pool["token0"]["symbol"]
-        pool_info.token1 = pool["token1"]["symbol"]
-        pool_info.decimals0 = int(pool["token0"]["decimals"])
-        pool_info.decimals1 = int(pool["token1"]["decimals"])
+        pool_info.token0 = pool_data["pool"]["token0"]["symbol"]
+        pool_info.token1 = pool_data["pool"]["token1"]["symbol"]
+        pool_info.decimals0 = int(pool_data["pool"]["token0"]["decimals"])
+        pool_info.decimals1 = int(pool_data["pool"]["token1"]["decimals"])
         return pool_info
     except Exception as ex:
         logging.error("got exception while querying pool data:", ex)
@@ -100,7 +102,7 @@ def get_pool_info(pool_id):
 
 
 def get_tick_data(date, pool_info):
-    tick_query = """query get_ticks($date: Int, $num_skip: Int, $pool_id: ID!) {
+    tick_query = """query get_ticks($num_skip: Int, $pool_id: ID!, $date: Int) {
         tickDayDatas(skip:$num_skip, where: {pool: $pool_id, date: $date}) {
             date
             tick {
@@ -113,18 +115,20 @@ def get_tick_data(date, pool_info):
     # get tick info
     tick_mapping = {}
     num_skip = 0
+
+    ts = date_to_utc_timestamp(date)
     try:
         while True:
             logging.info("Querying ticks, num_skip={}".format(num_skip))
-            ts = date_to_utc_timestamp(date)
-            variables = {"date": ts, "num_skip": num_skip, "pool_id": pool_info.pool_id}
+            variables = {"num_skip": num_skip, "pool_id": pool_info.pool_id, "date": ts}
             response = client.execute(gql(tick_query), variable_values=variables)
 
-            if len(response["ticks"]) == 0:
+            tick_data = response["tickDayDatas"]
+            if len(tick_data) == 0:
                 break
-            num_skip += len(response["ticks"])
-            for item in response["ticks"]:
-                tick_mapping[int(item["tickIdx"])] = int(item["liquidityNet"])
+            num_skip += len(tick_data)
+            for item in tick_data:
+                tick_mapping[int(item["tick"]["tickIdx"])] = int(item["tick"]["liquidityNet"])
         return tick_mapping
     except Exception as ex:
         logging.error("got exception while querying tick data:", ex)
@@ -222,12 +226,11 @@ def insert_into_db(insert_data):
 
 
 def main(pool_id, start_date, end_date):
-    pool_info = get_pool_info(pool_id)
-
     # iterate over dates
     date = start_date
     while date <= end_date:
         logging.info("Processing date: {}".format(date))
+        pool_info = get_pool_info(date, pool_id)
         tick_mapping = get_tick_data(date, pool_info)
         insert_data = get_liquidity_data(date, pool_info, tick_mapping)
         insert_count = insert_into_db(insert_data)
@@ -254,6 +257,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    start_date = datetime.datetime.strptime(args.start_date, "%Y-%m-%d").date()
-    end_date = datetime.datetime.strptime(args.start_date, "%Y-%m-%d").date()
+    start_date = datetime.datetime.strptime(args.start_date, "%Y-%m-%d")
+    end_date = datetime.datetime.strptime(args.start_date, "%Y-%m-%d")
     main(args.pool_id, start_date, end_date)

@@ -12,3 +12,6 @@ def utc_timestamp_to_date(ts):
 def utc_timestamp_to_date_str(ts):
     utc_date = datetime.fromtimestamp(ts, tz=timezone.utc)
     return utc_date.strftime("%Y-%m-%d")
+
+
+print(date_to_utc_timestamp(datetime(2023, 5, 1)))
