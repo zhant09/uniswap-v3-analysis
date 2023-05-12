@@ -8,7 +8,7 @@ import configparser
 import os
 
 
-BASE_PATH = os.path.abspath(os.path.join(os.getcwd(), ".."))
+BASE_PATH = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 
 
 class Config(object):

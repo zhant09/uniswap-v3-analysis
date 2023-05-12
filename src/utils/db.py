@@ -5,7 +5,7 @@ Created by
 """
 
 import pymysql
-from config import conf
+from utils.config import conf
 
 
 class DB(object):
