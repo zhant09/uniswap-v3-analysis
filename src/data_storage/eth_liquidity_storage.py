@@ -17,7 +17,7 @@ from gql.transport.requests import RequestsHTTPTransport
 from storage_helper import EthPoolInfo
 
 
-BASE_PATH = os.path.abspath(os.path.join(os.getcwd(), ".."))
+BASE_PATH = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 
 log_file = BASE_PATH + "/logs/" + datetime.datetime.now().strftime('liquidity_storage_%Y%m%d.log')
 logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(module)s %(levelname)s %(message)s')
