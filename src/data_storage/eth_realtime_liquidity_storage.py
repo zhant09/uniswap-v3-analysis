@@ -73,7 +73,7 @@ def get_pool_info(pool_id):
     }"""
 
     try:
-        logging.info("Querying pool meta data")
+        logging.info("Querying pool meta data, pool_id: ", pool_id)
 
         pool_info = EthPoolInfo(pool_id)
         variables = {"pool_id": pool_id}
