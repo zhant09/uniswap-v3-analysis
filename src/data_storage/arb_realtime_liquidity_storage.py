@@ -27,7 +27,7 @@ TICK_BASE = 1.0001
 
 client = Client(
     transport=RequestsHTTPTransport(
-        url='https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
+        url='https://api.thegraph.com/subgraphs/name/messari/uniswap-v3-arbitrum',
         verify=True,
         retries=5,
     ))
@@ -50,16 +50,15 @@ def fee_tier_to_tick_spacing(fee_tier):
 def get_pool_info(pool_id):
     # get pool info
     pool_query = """query get_pools($pool_id: ID!) {
-        pools(where: {id: $pool_id}) {
+        liquidityPool(id: $pool_id) {
             tick
-            feeTier
-            token0 {
+            inputTokens {
                 symbol
                 decimals
             }
-            token1 {
-                symbol
-                decimals
+            fees {
+                feeType
+                feePercentage
             }
         }
     }"""
@@ -71,19 +70,21 @@ def get_pool_info(pool_id):
         variables = {"pool_id": pool_id}
         response = client.execute(gql(pool_query), variable_values=variables)
 
-        if len(response['pools']) == 0:
+        if len(response['liquidityPool']) == 0:
             logging.error("pool not found, pool_id: ", pool_id)
             exit(-1)
 
-        pool_data = response['pools'][0]
+        pool_data = response['liquidityPool']
         pool_info.current_tick = int(pool_data["tick"])
-        pool_info.fee_tier = int(pool_data["feeTier"])
+        for fee_pair in pool_data["fees"]:
+            if fee_pair["feeType"] == "FIXED_TRADING_FEE":
+                pool_info.fee_tier = int(10 ** 4 * float(fee_pair["feePercentage"]))  # convert to a million base
         pool_info.tick_spacing = fee_tier_to_tick_spacing(pool_info.fee_tier)
 
-        pool_info.token0 = pool_data["token0"]["symbol"]
-        pool_info.token1 = pool_data["token1"]["symbol"]
-        pool_info.decimals0 = int(pool_data["token0"]["decimals"])
-        pool_info.decimals1 = int(pool_data["token1"]["decimals"])
+        pool_info.token0 = pool_data["inputTokens"][0]["symbol"]
+        pool_info.token1 = pool_data["inputTokens"][1]["symbol"]
+        pool_info.decimals0 = int(pool_data["inputTokens"][0]["decimals"])
+        pool_info.decimals1 = int(pool_data["inputTokens"][1]["decimals"])
         return pool_info
     except Exception as ex:
         logging.error("got exception while querying pool data:", ex)
@@ -93,7 +94,7 @@ def get_pool_info(pool_id):
 def get_tick_data(pool_info):
     tick_query = """query get_ticks($num_skip: Int, $pool_id: ID!) {
         ticks(skip: $num_skip, where: {pool: $pool_id}) {
-            tickIdx
+            index
             liquidityNet
         }
     }"""
@@ -113,7 +114,7 @@ def get_tick_data(pool_info):
                 break
             num_skip += len(tick_data)
             for item in tick_data:
-                tick_mapping[int(item["tickIdx"])] = int(item["liquidityNet"])
+                tick_mapping[int(item["index"])] = int(item["liquidityNet"])
         return tick_mapping
     except Exception as ex:
         logging.error("got exception while querying tick data:", ex)
@@ -141,7 +142,7 @@ def get_liquidity_data(dt: datetime, pool_info: PoolInfo, tick_mapping: dict):
     while tick <= max_tick:
         line_dict = {
             "pool_id": pool_info.pool_id,
-            "chain": "ETH",
+            "chain": "ARB",
             "datetime": dt,
             "fee_tier": pool_info.fee_tier,
             "tick_spacing": pool_info.tick_spacing,
@@ -212,7 +213,7 @@ def insert_into_db(insert_data):
 
 def main(pool_id):
     dt = datetime.datetime.now()
-    logging.info("Processing ETH Pool {} at {}".format(pool_id, dt))
+    logging.info("Processing ARB pool {} at {}".format(pool_id, dt))
 
     pool_info = get_pool_info(pool_id)
     tick_mapping = get_tick_data(pool_info)

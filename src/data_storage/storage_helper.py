@@ -1,4 +1,4 @@
-class EthPoolInfo:
+class PoolInfo:
     def __init__(self, pool_id):
         self._pool_id = pool_id
         self._current_tick = 0
