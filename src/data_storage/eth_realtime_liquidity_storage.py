@@ -17,7 +17,9 @@ from storage_helper import EthPoolInfo
 from utils.db import db
 from utils.config import BASE_PATH
 
+
 logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("gql").setLevel(logging.WARNING)
 log_file = BASE_PATH + "/logs/" + datetime.datetime.now().strftime('liquidity_realtime_storage_%Y%m%d.log')
 logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(module)s %(levelname)s %(message)s')
 
@@ -73,7 +75,7 @@ def get_pool_info(pool_id):
     }"""
 
     try:
-        logging.info("Querying pool meta data, pool_id: ", pool_id)
+        logging.info("Querying pool meta data")
 
         pool_info = EthPoolInfo(pool_id)
         variables = {"pool_id": pool_id}
@@ -221,6 +223,7 @@ def insert_into_db(insert_data):
 def main(pool_id):
     # iterate over dates
     dt = datetime.datetime.now()
+    logging.info("Processing pool {} at {}".format(pool_id, dt))
 
     pool_info = get_pool_info(pool_id)
     tick_mapping = get_tick_data(pool_info)
