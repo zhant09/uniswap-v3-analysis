@@ -103,7 +103,6 @@ def get_tick_data(pool_info):
     num_skip = 0
 
     error_times = 0
-    # todo: need to publish, if work, also modify arb_realtime_liquidity_storage.py
     while True:
         logging.info("Querying ticks, num_skip={}".format(num_skip))
         variables = {"num_skip": num_skip, "pool_id": pool_info.pool_id}

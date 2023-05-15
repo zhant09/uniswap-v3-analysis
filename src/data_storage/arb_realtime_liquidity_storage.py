@@ -103,10 +103,11 @@ def get_tick_data(pool_info):
     tick_mapping = {}
     num_skip = 0
 
-    try:
-        while True:
-            logging.info("Querying ticks, num_skip={}".format(num_skip))
-            variables = {"num_skip": num_skip, "pool_id": pool_info.pool_id}
+    error_times = 0
+    while True:
+        logging.info("Querying ticks, num_skip={}".format(num_skip))
+        variables = {"num_skip": num_skip, "pool_id": pool_info.pool_id}
+        try:
             response = client.execute(gql(tick_query), variable_values=variables)
 
             tick_data = response["ticks"]
@@ -115,10 +116,13 @@ def get_tick_data(pool_info):
             num_skip += len(tick_data)
             for item in tick_data:
                 tick_mapping[int(item["index"])] = int(item["liquidityNet"])
-        return tick_mapping
-    except Exception as ex:
-        logging.error("got exception while querying tick data:", ex)
-        exit(-1)
+        except Exception as ex:
+            error_times += 1
+            if error_times == 3:
+                logging.error("got 3 times exception while querying tick data, exit.", ex)
+                exit(-1)
+            logging.info("retrying... num_skip={}, error_times={}".format(num_skip, error_times))
+    return tick_mapping
 
 
 def get_liquidity_data(dt: datetime, pool_info: PoolInfo, tick_mapping: dict):
