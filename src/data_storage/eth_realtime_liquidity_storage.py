@@ -228,8 +228,8 @@ def main(pool_id, is_file_store):
     else:
         date_str = dt.strftime("%Y%m%d")
         df = pd.DataFrame(insert_data)
-        filename = BASE_PATH + "/data/pool_liquidity_{}_{}.csv".format(pool_id, date_str)
-        df.to_csv(filename, index=False)
+        filename = BASE_PATH + "/data/pool_liquidity_{}_{}.csv.gzip".format(pool_id, date_str)
+        df.to_csv(filename, compression="gzip", index=False)
         logging.info("Saved to {}, line count {}".format(filename, len(df)))
 
 

@@ -258,5 +258,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     start_date = datetime.datetime.strptime(args.start_date, "%Y-%m-%d")
-    end_date = datetime.datetime.strptime(args.start_date, "%Y-%m-%d")
+    end_date = datetime.datetime.strptime(args.end_date, "%Y-%m-%d")
     main(args.pool_id, start_date, end_date)
