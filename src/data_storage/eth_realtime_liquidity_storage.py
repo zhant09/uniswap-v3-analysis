@@ -9,6 +9,7 @@ import argparse
 import datetime
 import logging
 import math
+import pandas as pd
 
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
@@ -214,15 +215,22 @@ def insert_into_db(insert_data):
     return insert_count
 
 
-def main(pool_id):
+def main(pool_id, is_file_store):
     dt = datetime.datetime.now()
     logging.info("Processing ETH Pool {} at {}".format(pool_id, dt))
 
     pool_info = get_pool_info(pool_id)
     tick_mapping = get_tick_data(pool_info)
     insert_data = get_liquidity_data(dt, pool_info, tick_mapping)
-    insert_count = insert_into_db(insert_data)
-    logging.info("Inserted {} rows".format(insert_count))
+    if not is_file_store:
+        insert_count = insert_into_db(insert_data)
+        logging.info("Inserted {} rows".format(insert_count))
+    else:
+        date_str = dt.strftime("%Y%m%d")
+        df = pd.DataFrame(insert_data)
+        filename = BASE_PATH + "/data/pool_liquidity_{}_{}.csv".format(pool_id, date_str)
+        df.to_csv(filename, index=False)
+        logging.info("Saved to {}, line count {}".format(filename, len(df)))
 
 
 if __name__ == "__main__":
@@ -232,6 +240,10 @@ if __name__ == "__main__":
         type=str,
         required=True
     )
+    parser.add_argument(
+        '--is_file_store',
+        action=argparse.BooleanOptionalAction
+    )
 
     args = parser.parse_args()
-    main(args.pool_id)
+    main(args.pool_id, args.is_file_store)
