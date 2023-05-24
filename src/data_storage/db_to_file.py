@@ -49,8 +49,9 @@ def main(pool_id, start_date, end_date):
     while date <= end_date:
         logging.info("Processing Pool {} at {}".format(pool_id, date.strftime("%Y-%m-%d")))
         data = get_data_from_db(pool_id, date, date + datetime.timedelta(days=1))
-        logging.info("Finishing Fetching data from db.")
-        save_data_into_file(pool_id, date, data)
+        logging.info("Finishing Fetching data from db. lines: {}".format(len(data)))
+        if len(data) > 0:
+            save_data_into_file(pool_id, date, data)
         date = date + datetime.timedelta(days=1)
 
 
