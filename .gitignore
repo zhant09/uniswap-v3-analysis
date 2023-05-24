@@ -165,3 +165,6 @@ conf/
 bin/
 
 publish.sh
+
+# MAC
+.DS_Store
