@@ -14,6 +14,6 @@ def utc_timestamp_to_date_str(ts):
     return utc_date.strftime("%Y-%m-%d")
 
 
-print(date_to_utc_timestamp(datetime(2023, 5, 25, 9, 35)))
-print(utc_timestamp_to_date(1685006760))
+# print(date_to_utc_timestamp(datetime(2023, 5, 26, 9, 45)))
+# print(utc_timestamp_to_date(1685006760))
 
