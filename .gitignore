@@ -163,8 +163,8 @@ cython_debug/
 data/
 conf/
 bin/
-
 publish.sh
+dex_cex_analysis.ipynb
 
 # MAC
 .DS_Store
