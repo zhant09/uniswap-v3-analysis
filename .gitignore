@@ -165,6 +165,7 @@ conf/
 bin/
 publish.sh
 dex_cex_analysis.ipynb
+test/
 
 # MAC
 .DS_Store
