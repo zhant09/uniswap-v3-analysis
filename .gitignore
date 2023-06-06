@@ -163,9 +163,11 @@ cython_debug/
 data/
 conf/
 bin/
+test/
 publish.sh
 dex_cex_analysis.ipynb
-test/
+hf_uniswap_user_analysis.ipynb
+
 
 # MAC
 .DS_Store
