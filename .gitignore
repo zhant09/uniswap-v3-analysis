@@ -168,7 +168,7 @@ mindnode/
 publish.sh
 dex_cex_analysis.ipynb
 hf_uniswap_user_analysis.ipynb
-
+fetch_pool_data.ipynb
 
 # MAC
 .DS_Store
