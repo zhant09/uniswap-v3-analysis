@@ -164,6 +164,7 @@ data/
 conf/
 bin/
 test/
+mindnode/
 publish.sh
 dex_cex_analysis.ipynb
 hf_uniswap_user_analysis.ipynb
