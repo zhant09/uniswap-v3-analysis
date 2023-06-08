@@ -1,7 +1,9 @@
 import asyncio
-import logging
 import datetime
-import time
+import gzip
+import logging
+import logging.handlers
+import os
 
 from kucoin.client import Client
 from kucoin.asyncio import KucoinSocketManager
@@ -9,8 +11,28 @@ from kucoin.asyncio import KucoinSocketManager
 from utils.config import BASE_PATH
 
 
-log_file = BASE_PATH + "/logs/" + datetime.datetime.now().strftime('eth_socket_order_%Y%m%d.log')
-logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(module)s %(levelname)s %(message)s')
+# log_file = BASE_PATH + "/logs/" + datetime.datetime.now().strftime('eth_socket_order_%Y%m%d.log')
+# logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(module)s %(levelname)s %(message)s')
+
+class GZipRotator:
+    def __call__(self, source, dest):
+        os.rename(source, dest)
+        f_in = open(dest, 'rb')
+        f_out = gzip.open("%s.gz" % dest, 'wb')
+        f_out.writelines(f_in)
+        f_out.close()
+        f_in.close()
+        os.remove(dest)
+
+log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+log = logging.handlers.TimedRotatingFileHandler(BASE_PATH + '/logs/' + 'eth_socket_order.log', 'midnight', 1, backupCount=30)
+log.setLevel(logging.INFO)
+log.setFormatter(log_formatter)
+log.rotator = GZipRotator()
+
+logger = logging.getLogger(__name__)
+logger.addHandler(log)
+logger.setLevel(logging.INFO)
 
 
 api_key = '<api_key>'
@@ -24,7 +46,7 @@ async def main():
     # callback function that receives messages from the socket
     async def handle_evt(msg):
         # if msg['topic'] == '/spotMarket/level2Depth5:ETH-USDC':
-        logging.info(msg["data"])
+        logger.info(msg["data"])
         # file_path = BASE_PATH + "/data/eth_socket_order_{}.json".format(datetime.datetime.now().strftime("%Y%m%d"))
         # async with open(file_path, "w") as wf:
         #     await wf.write(str(msg["data"] + "\n"))
@@ -43,6 +65,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    logging.info("Start fetching eth socket order data")
+    logger.info("Start fetching eth socket order data")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
+ 
