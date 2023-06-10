@@ -167,6 +167,7 @@ test/
 mindnode/
 publish.sh
 dex_cex_analysis.ipynb
+*price*.ipynb
 hf_uniswap_user_analysis.ipynb
 fetch_pool_data.ipynb
 
