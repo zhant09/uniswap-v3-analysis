@@ -18,6 +18,12 @@ def utc_timestamp_to_datetime_str(ts):
     utc_date = datetime.fromtimestamp(ts, tz=timezone.utc)
     return utc_date.strftime("%Y-%m-%d %H:%M:%S")
 
+
+def utc_timestamp_to_datetime_ms_str(ts):
+    utc_date = datetime.fromtimestamp(ts/1000, tz=timezone.utc)
+    return utc_date.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+
 # print(date_to_utc_timestamp(datetime(2023, 5, 28, 21, 0)))
 # print(date_to_utc_timestamp(datetime(2023, 5, 28, 23, 0)))
 # print(utc_timestamp_to_date(1685006760))
