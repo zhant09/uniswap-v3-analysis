@@ -1,5 +1,6 @@
 import gzip
 import logging
+import logging.handlers
 import os
 import time
 
@@ -38,7 +39,7 @@ def main():
     arbitrum_url = conf.get_config('INFURA', 'arb_url')
     logger.info('Starting Arb Price Storage')
     web3 = Web3(Web3.HTTPProvider(arbitrum_url))
-    pool_contract = web3.eth.contract(address=POOL_ADDRESS, abi=arb_abi)
+    pool_contract = web3.eth.contract(address=POOL_ADDRESS, abi=arb_abi.arb_pool_abi)
     
     while True:
         start_time = int(time.time() * 1000)
