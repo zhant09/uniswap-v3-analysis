@@ -14,7 +14,6 @@ from utils import arb_abi
 # ARB 0.05% USDC/ETH pool
 POOL_ADDRESS = "0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443"  
 
-
 class GZipRotator:
     def __call__(self, source, dest):
         os.rename(source, dest)
@@ -25,6 +24,7 @@ class GZipRotator:
         f_in.close()
         os.remove(dest)
 
+
 log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 log = logging.handlers.TimedRotatingFileHandler(BASE_PATH + '/logs/' + 'arb_price_storage.log', 'midnight', 1, backupCount=30)
 log.setLevel(logging.INFO)
@@ -33,6 +33,7 @@ log.rotator = GZipRotator()
 
 logger = logging.getLogger(__name__)
 logger.addHandler(log)
+logger.setLevel(logging.INFO)
 
 
 def main():

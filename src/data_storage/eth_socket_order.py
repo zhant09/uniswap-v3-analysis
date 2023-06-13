@@ -11,9 +11,6 @@ from kucoin.asyncio import KucoinSocketManager
 from utils.config import BASE_PATH
 
 
-# log_file = BASE_PATH + "/logs/" + datetime.datetime.now().strftime('eth_socket_order_%Y%m%d.log')
-# logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(module)s %(levelname)s %(message)s')
-
 class GZipRotator:
     def __call__(self, source, dest):
         os.rename(source, dest)
@@ -24,8 +21,10 @@ class GZipRotator:
         f_in.close()
         os.remove(dest)
 
+
 log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-log = logging.handlers.TimedRotatingFileHandler(BASE_PATH + '/logs/' + 'eth_socket_order.log', 'midnight', 1, backupCount=30)
+log = logging.handlers.TimedRotatingFileHandler(BASE_PATH + '/logs/' + 'eth_socket_order.log', 'midnight', 1,
+                                                backupCount=30)
 log.setLevel(logging.INFO)
 log.setFormatter(log_formatter)
 log.rotator = GZipRotator()
