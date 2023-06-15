@@ -51,6 +51,8 @@ def main():
         tick = slot0[1]
         logger.info("start_time: %s, tick: %s, tick_price: %s, sqrt_price: %s, time_cost: %s", start_time, tick, 
                     math_utils.tick_to_price(tick), math_utils.sqrt_price_normalize(sqrt_price), end_time - start_time)
+        # todo decrease the usage to meet the limitation
+        time.sleep(2)
         
 
 if __name__ == "__main__":
