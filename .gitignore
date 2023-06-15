@@ -173,6 +173,8 @@ dex_cex_analysis.ipynb
 hf_uniswap_user_analysis.ipynb
 fetch_pool_data.ipynb
 fetch_pool_user_data.ipynb
+user_ex_combine_analysis.ipynb
 
 # MAC
 .DS_Store
+
