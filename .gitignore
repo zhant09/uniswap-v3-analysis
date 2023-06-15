@@ -164,7 +164,9 @@ data/
 conf/
 bin/
 test/
+logs/
 mindnode/
+
 publish.sh
 dex_cex_analysis.ipynb
 *price*.ipynb
