@@ -41,10 +41,11 @@ def main():
     logger.info('Starting Arb Price Storage')
     web3 = Web3(Web3.HTTPProvider(arbitrum_url))
     pool_contract = web3.eth.contract(address=POOL_ADDRESS, abi=arb_abi.arb_pool_abi)
-    
+    slot0_func = pool_contract.functions.slot0()
+
     while True:
         start_time = int(time.time() * 1000)
-        slot0 = pool_contract.functions.slot0().call()
+        slot0 = slot0_func.call()
         end_time = int(time.time() * 1000)
         sqrt_price = slot0[0]
         tick = slot0[1]
