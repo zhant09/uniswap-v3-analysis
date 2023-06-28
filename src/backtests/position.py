@@ -49,3 +49,7 @@ class Position(object):
 
     def get_profit_rate(self, current_price):
         return self.get_profit(current_price) / self.get_init_value(current_price)
+
+    def __str__(self):
+        return "init_eth: {}, init_usd: {}, current_eth: {}, current_usd: {}".format(self.init_eth, self.init_usd,
+                                                                                     self.current_eth, self.current_usd)
