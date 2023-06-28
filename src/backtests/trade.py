@@ -10,8 +10,6 @@ class TradeType(Enum):
     CONTINUE_SELL = 4
     REVERSE_BUY = 5
     REVERSE_SELL = 6
-    BUY_LIST = [BUY, CONTINUE_BUY, REVERSE_BUY]
-    SELL_LIST = [SELL, CONTINUE_SELL, REVERSE_SELL]
 
 
 class Trade(object):

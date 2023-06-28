@@ -1,5 +1,7 @@
 class Position(object):
 
+    TRADE_FEE = 0.0005
+
     def __init__(self, init_eth, init_usd):
         self._init_eth = init_eth
         self._init_usd = init_usd
