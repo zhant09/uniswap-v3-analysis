@@ -1,12 +1,11 @@
 class Position(object):
 
-    TRADE_FEE = 0.0005
-
-    def __init__(self, init_eth, init_usd):
+    def __init__(self, init_eth, init_usd, trading_fee):
         self._init_eth = init_eth
         self._init_usd = init_usd
         self._current_eth = self._init_eth
         self._current_usd = self._init_usd
+        self.trading_fee = trading_fee
 
     @property
     def init_eth(self):
@@ -34,11 +33,12 @@ class Position(object):
 
     def buy(self, price, amount):
         self._current_eth += amount
-        self._current_usd -= amount * price
+        self._current_usd -= amount * price * (1 + self.trading_fee)
 
+    # consume the amount including trading fee
     def sell(self, price, amount):
         self._current_eth -= amount
-        self._current_usd += amount * price
+        self._current_usd += amount * (1 - self.trading_fee) * price
 
     def get_init_value(self, price):
         return self._init_usd + self._init_eth * price
