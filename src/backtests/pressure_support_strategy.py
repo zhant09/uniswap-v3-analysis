@@ -1,6 +1,7 @@
 import copy
 import pandas as pd
 
+from data_parser import price_data_parser
 from utils.config import BASE_PATH
 from position import Position
 
@@ -24,22 +25,9 @@ class PressureSupportStrategy(object):
         self.trade_gap = trade_gap
         self.trade_amount = trade_amount
         self.fee_rate = fee_rate
-        self.data = self._init_data(file_path)
+        self.data = price_data_parser.parse_yahoo_data(file_path, "2023-03-21")
         self._init_base()
         self.trade_history = []
-
-    def _init_data(self, file_path):
-        df = pd.read_csv(file_path)
-        df = df.tail(97)
-        df.reset_index(inplace=True, drop=True)
-        records = df.to_dict("records")
-        data = []
-        for item in records:
-            item_dict = dict()
-            item_dict["day"] = item["Date"]
-            item_dict["price"] = float(item["Open"])
-            data.append(item_dict)
-        return data
 
     def _init_base(self):
         price_range_list = copy.deepcopy(self.trade_price_list)
@@ -68,7 +56,7 @@ class PressureSupportStrategy(object):
                 return amount
         return None
 
-    def on_trade(self, day, price):
+    def on_trade(self, datetime, price):
         predefined_amount = self._get_predefined_amount(price)
         if predefined_amount is None or predefined_amount == self.position.current_eth:
             return
@@ -80,7 +68,7 @@ class PressureSupportStrategy(object):
                 range_start_price = range_amount[0]
                 if current_range_upper < range_start_price < new_range_upper:
                     self.position.sell(range_start_price, self.trade_amount)
-                    self.trade_history.append((day, price, "S", range_start_price))
+                    self.trade_history.append((datetime, price, "S", range_start_price))
         # buy
         else:
             current_range_lower = self.amount_range_dict[self.position.current_eth][0]
@@ -89,19 +77,19 @@ class PressureSupportStrategy(object):
                 range_end_price = range_amount[1]
                 if new_range_lower < range_end_price < current_range_lower:
                     self.position.buy(range_end_price, self.trade_amount)
-                    self.trade_history.append((day, price, "B", range_end_price))
-        print("day: ", day, "price: ", price, self.position, "profit:", self.position.get_profit(price), "trade_type:",
-              self.trade_history[-1][2], "trade price:", self.trade_history[-1][3])
+                    self.trade_history.append((datetime, price, "B", range_end_price))
+        print("date: ", datetime, "price: ", price, self.position, "profit:", self.position.get_profit(price),
+              "trade_type:", self.trade_history[-1][2], "trade price:", self.trade_history[-1][3])
         # print("init value: {}, current_value: {}, profit_rate: {}".format(self.position.get_init_value(price),
         #                                                                   self.position.get_current_value(price),
         #                                                                   self.position.get_profit_rate(price)))
 
     def main(self):
-        print("init day:", self.data[0]["day"], "init price:", self.data[0]["price"], "init eth:",
+        print("init date:", self.data[0]["datetime"], "init price:", self.data[0]["price"], "init eth:",
               self.position.current_eth, "init usd:", self.position.current_usd)
         for item in self.data:
-            self.on_trade(item["day"], item["price"])
-        print("day: ", self.data[-1]["day"], "price: ", self.data[-1]["price"], self.position, "profit:",
+            self.on_trade(item["datetime"], item["price"])
+        print("date: ", self.data[-1]["datetime"], "price: ", self.data[-1]["price"], self.position, "profit:",
               self.position.get_profit(self.data[-1]["price"]))
 
 
