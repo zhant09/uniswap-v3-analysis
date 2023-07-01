@@ -1,5 +1,5 @@
 import copy
-import pandas as pd
+# import pandas as pd
 
 from data_parser import price_data_parser
 from utils.config import BASE_PATH
@@ -13,19 +13,23 @@ caution:
         when cross the 1800 board upside, the buy happens on 1790
         when the price between 1790 and 1810, it could be in either (1710, 1790) or (1810, 1890) range amount, 
             and no trade will happen between the gap
-error:
-    when the price is fluctuating, every trade will only have 20 dollars profit 
+core:
+    the main idea is in every range, there should be a predefined eth amount, if not matched, the trade happens 
 """
 
 
 class PressureSupportStrategy(object):
 
-    def __init__(self, file_path, trade_price_list, trade_gap, trade_amount, fee_rate):
+    # FILE_PATH = BASE_PATH + "/data/eth_usd_20230628.csv"
+    FILE_PATH = BASE_PATH + "/data/eth_usd_polygon_20230628.csv"
+
+    def __init__(self, trade_price_list, trade_gap, trade_amount, fee_rate):
         self.trade_price_list = trade_price_list
         self.trade_gap = trade_gap
         self.trade_amount = trade_amount
         self.fee_rate = fee_rate
-        self.data = price_data_parser.parse_yahoo_data(file_path, "2023-03-21")
+        self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, "2023-03-21")
+        # self.data = price_data_parser.parse_yahoo_data(self.FILE_PATH, "2023-03-21")
         self._init_base()
         self.trade_history = []
 
@@ -89,17 +93,17 @@ class PressureSupportStrategy(object):
               self.position.current_eth, "init usd:", self.position.current_usd)
         for item in self.data:
             self.on_trade(item["datetime"], item["price"])
-        print("date: ", self.data[-1]["datetime"], "price: ", self.data[-1]["price"], self.position, "profit:",
-              self.position.get_profit(self.data[-1]["price"]))
+        print("final date: ", self.data[-1]["datetime"], "price: ", self.data[-1]["price"], self.position, "profit:",
+              self.position.get_profit(self.data[-1]["price"]), "profit rate:",
+              self.position.get_profit_rate(self.data[-1]["price"]))
 
 
 if __name__ == '__main__':
-    file_path = BASE_PATH + "/data/eth_usd_20230628.csv"
-    trade_price_list = [1600, 1700, 1800, 1900, 2000]
-    trade_gap = 10
+    trade_price_list = [1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000]
+    trade_gap = 5
     # trade_price_list = [1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000]
     # trade_gap = 5
     trade_amount = 1
     fee_rate = 0.0006
-    pressure_support_strategy = PressureSupportStrategy(file_path, trade_price_list, trade_gap, trade_amount, fee_rate)
+    pressure_support_strategy = PressureSupportStrategy(trade_price_list, trade_gap, trade_amount, fee_rate)
     pressure_support_strategy.main()
