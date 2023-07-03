@@ -16,13 +16,14 @@ def parse_yahoo_data(file_path, start_datetime):
     return data
 
 
-def parse_polygon_data(file_path, start_datetime):
+def parse_polygon_data(file_path, start_datetime, end_datetime=None):
     df = pd.read_csv(file_path)
     records = df.to_dict("records")
     data = []
     for item in records:
         datetime = utils.utc_timestamp_to_datetime_ms_str(item["t"])
-        if datetime >= start_datetime:
+        if (end_datetime is None and start_datetime <= datetime) or (
+                end_datetime is not None and start_datetime <= datetime <= end_datetime):
             item_dict = dict()
             item_dict["datetime"] = datetime
             item_dict["price"] = float(item["o"])

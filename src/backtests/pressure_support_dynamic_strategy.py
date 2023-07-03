@@ -136,6 +136,7 @@ if __name__ == '__main__':
     trade_price_list = [1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000]
     trade_gap = 10
     trade_amount = 0.25
+    # best param until now, about 10% profit
     # trade_price_list = [1700, 1800, 1850, 1900, 2000]
     # trade_gap = 10
     # trade_amount = 0.5
