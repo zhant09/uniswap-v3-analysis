@@ -32,11 +32,17 @@ class Position(object):
         self._current_usd = value
 
     def buy(self, price, amount):
+        if self._current_usd < amount * price * (1 + self.trading_fee):
+            raise ValueError("not enough usd to buy")
+
         self._current_eth += amount
         self._current_usd -= amount * price * (1 + self.trading_fee)
 
     # consume the amount including trading fee
     def sell(self, price, amount):
+        if self._current_eth < amount:
+            raise ValueError("not enough eth to sell")
+
         self._current_eth -= amount
         self._current_usd += amount * (1 - self.trading_fee) * price
 
