@@ -92,6 +92,10 @@ if __name__ == '__main__':
     init_usd = 1000
     trade_amount = 0.25
     fee_rate = 0.0006
-    pressure_support_strategy = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate,
-                                                        is_train=True)
-    pressure_support_strategy.main()
+    # pressure_support_strategy1 = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate,
+    #                                                     is_train=True)
+    # pressure_support_strategy1.main()
+
+    pressure_support_strategy2 = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate,
+                                                        is_test=True)
+    pressure_support_strategy2.main()
