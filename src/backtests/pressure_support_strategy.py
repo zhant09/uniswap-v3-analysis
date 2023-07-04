@@ -3,6 +3,7 @@ import copy
 from data_parser import price_data_parser
 from utils.config import BASE_PATH
 from position import Position
+from evaluation import sharpe_ratio
 
 
 class PressureSupportStrategy(object):
@@ -45,6 +46,7 @@ class PressureSupportStrategy(object):
     def on_trade(self, datetime, price):
         last_trade = self.trade_history[-1] if self.trade_history else None
 
+        is_trade = False
         # sell
         sell_price_list = self.trade_price_dict["sell"]
         for sell_price, amount_mpl in sell_price_list:
@@ -52,11 +54,16 @@ class PressureSupportStrategy(object):
                 continue
 
             if self._on_sell(datetime, sell_price, self.trade_amount * amount_mpl) is not False:
+                is_trade = True
                 print("date: ", datetime, "price: ", price, "trade_type:", self.trade_history[-1][3], "trade price:",
                       self.trade_history[-1][1], self.position, "profit:", self.position.get_profit(price),
                       "profit rate:", self.position.get_profit_rate(price))
+
             if last_trade is None:
-                return  # only sell once
+                break  # only sell once
+
+        if is_trade:
+            return is_trade
 
         # buy
         buy_price_list = self.trade_price_dict["buy"]
@@ -68,17 +75,73 @@ class PressureSupportStrategy(object):
                 print("date: ", datetime, "price: ", price, "trade_type:", self.trade_history[-1][3], "trade price:",
                       self.trade_history[-1][1], self.position, "profit:", self.position.get_profit(price),
                       "profit rate:", self.position.get_profit_rate(price))
+
             if last_trade is None:
-                return  # only sell once
+                break  # only sell once
+
+        return is_trade
+
+    def _calc_origin_daily_return(self, today_price, yesterday_price):
+        yesterday_value = self.position.get_init_value(yesterday_price)
+        today_value = self.position.get_init_value(today_price)
+        daily_profit = today_value - yesterday_value
+        daily_return = daily_profit / yesterday_value
+        return daily_return
+
+    def _calc_daily_return(self, yesterday_position, today_price, yesterday_price):
+        yesterday_value = yesterday_position.get_value(yesterday_price)
+        today_value = self.position.get_value(today_price)
+        daily_profit = today_value - yesterday_value
+        daily_return = daily_profit / yesterday_value
+        return daily_return
 
     def main(self):
-        print("init date:", self.data[0]["datetime"], "init price:", self.data[0]["price"], "init eth:",
+        first_price = self.data[0]["price"]
+        print("init date:", self.data[0]["datetime"], "init price:", first_price, "init eth:",
               self.position.current_eth, "init usd:", self.position.current_usd)
+
+        end_time = "23:00:00"
+        origin_daily_return_list = []
+        daily_return_list = []
+        yesterday_position = copy.deepcopy(self.position)
+        yesterday_price = first_price
         for item in self.data:
-            self.on_trade(item["datetime"], item["price"])
-        print("final date: ", self.data[-1]["datetime"], "price: ", self.data[-1]["price"], self.position, "profit:",
-              self.position.get_profit(self.data[-1]["price"]), "profit rate:",
-              self.position.get_profit_rate(self.data[-1]["price"]))
+            date_time = item["datetime"]
+            price = item["price"]
+            self.on_trade(date_time, price)
+
+            day_list = date_time.split(" ")
+            day = day_list[0]
+            day_time = day_list[1]
+            if day_time[:-4] == end_time:
+                origin_daily_return = self._calc_origin_daily_return(price, yesterday_price)
+                origin_daily_return_list.append(origin_daily_return)
+
+                daily_return = self._calc_daily_return(yesterday_position, price, yesterday_price)
+                daily_return_list.append(daily_return)
+                yesterday_position = copy.deepcopy(self.position)
+                yesterday_price = price
+                print("date: ", date_time, "price: ", price, "origin daily return:", origin_daily_return,
+                      "daily return:", daily_return)
+
+        last_price = self.data[-1]["price"]
+        origin_profit = self.position.get_init_value(last_price) - self.position.get_init_value(first_price)
+        origin_profit_rate = origin_profit / self.position.get_init_value(first_price)
+
+        strategy_profit = self.position.get_profit(last_price)
+        strategy_profit_rate = self.position.get_profit_rate(last_price)
+
+        overall_profit = origin_profit + strategy_profit
+        overall_profit_rate = overall_profit / self.position.get_init_value(first_price)
+        print("final date: ", self.data[-1]["datetime"], "price: ", last_price, self.position)
+        print("origin profit:", origin_profit, "origin profit rate:", origin_profit_rate, "strategy profit:",
+              strategy_profit, "strategy profit rate:", strategy_profit_rate, "overall profit:", overall_profit,
+              "overall profit rate:", overall_profit_rate)
+
+        rf = 0.0365 / 365
+        origin_sharpe_ratio = sharpe_ratio.calc(origin_daily_return_list, rf)
+        overall_sharpe_ratio = sharpe_ratio.calc(daily_return_list, rf)
+        print("origin sharpe ratio:", origin_sharpe_ratio, "sharpe ratio:", overall_sharpe_ratio)
 
 
 if __name__ == '__main__':
@@ -92,10 +155,12 @@ if __name__ == '__main__':
     init_usd = 1000
     trade_amount = 0.25
     fee_rate = 0.0006
+    pressure_support_strategy = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate)
+    pressure_support_strategy.main()
     # pressure_support_strategy1 = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate,
     #                                                     is_train=True)
     # pressure_support_strategy1.main()
 
-    pressure_support_strategy2 = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate,
-                                                        is_test=True)
-    pressure_support_strategy2.main()
+    # pressure_support_strategy2 = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate,
+    #                                                     is_test=True)
+    # pressure_support_strategy2.main()
