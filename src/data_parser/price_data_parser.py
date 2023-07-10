@@ -3,7 +3,7 @@ import pandas as pd
 from utils import utils
 
 
-def parse_yahoo_data(file_path, start_datetime):
+def parse_yahoo_data(file_path, start_datetime="0000-00-00"):
     df = pd.read_csv(file_path)
     records = df.to_dict("records")
     data = []
