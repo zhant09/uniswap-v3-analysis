@@ -122,8 +122,8 @@ class PressureSupportStrategy(object):
                 yesterday_position = copy.deepcopy(self.position)
                 yesterday_price = price
 
-                print("date: ", day, "price: ", price, "origin daily return:", origin_daily_return,
-                      "daily return:", daily_return, "strategy profit rate:", self.position.get_profit_rate(price))
+                # print("date: ", day, "price: ", price, "origin daily return:", origin_daily_return,
+                #       "daily return:", daily_return, "strategy profit rate:", self.position.get_profit_rate(price))
 
         last_price = self.data[-1]["price"]
         origin_profit = self.position.get_init_value(last_price) - self.position.get_init_value(first_price)
@@ -155,8 +155,10 @@ if __name__ == '__main__':
     init_eth = 1
     init_usd = 1000
     trade_amount = 0.25
-    trade_price_dict = {"buy": [(1800, 1), (1750, 1), (1700, 2), (1650, 2)],
-                        "sell": [(1900, 1), (1950, 1), (2000, 2), (2100, 2)]}
+    trade_price_dict = {"buy": [(1750, 2), (1700, 2), (1650, 2)],
+                        "sell": [(1950, 2), (2000, 2), (2100, 2)]}
+    # trade_price_dict = {"buy": [(1800, 1), (1750, 1), (1700, 2), (1650, 2)],
+    #                     "sell": [(1900, 1), (1950, 1), (2000, 2), (2100, 2)]}
     fee_rate = 0.0006
     pressure_support_strategy = PressureSupportStrategy(trade_price_dict, init_eth, init_usd, trade_amount, fee_rate)
     pressure_support_strategy.main()
