@@ -27,7 +27,7 @@ def parse_polygon_data(file_path, start_datetime, end_datetime=None):
         if (end_datetime is None and start_datetime <= datetime) or (
                 end_datetime is not None and start_datetime <= datetime <= end_datetime):
             item_dict = dict()
-            item_dict["datetime"] = datetime
+            item_dict["datetime"] = datetime[:-4]
             item_dict["price"] = float(item["o"])
             data.append(item_dict)
     return data

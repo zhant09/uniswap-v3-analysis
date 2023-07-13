@@ -22,7 +22,7 @@ from evaluation import sharpe_ratio
 class TippingPointStrategy(object):
 
     FILE_PATH = BASE_PATH + "/data/eth_usd_20230710.csv"
-    # FILE_PATH = BASE_PATH + "/data/eth_usd_polygon_20230703.csv"
+    # FILE_PATH = BASE_PATH + "/data/eth_usd_polygon_20230712.csv"
 
     def __init__(self, init_usd, trade_amount, fee_rate, is_train=False, is_test=False):
         self.trade_amount = trade_amount
@@ -31,10 +31,17 @@ class TippingPointStrategy(object):
         self.position = Position(0, init_usd, self.fee_rate)
         self.trade_history = []  # (daytime, price, amount, "S"/"B")
         self.cost = 0
+        self.last_buy_price = 0
 
     def _init_data(self, is_train, is_test):
         train_start = "2022-06-01"
         train_end = "2023-03-21"
+        # if is_train:
+        #     self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, train_start, train_end)
+        # elif is_test:
+        #     self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, train_end)
+        # else:
+        #     self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, train_start)
         if is_train:
             self.data = price_data_parser.parse_yahoo_data(self.FILE_PATH, train_start, train_end)
         elif is_test:
@@ -44,12 +51,20 @@ class TippingPointStrategy(object):
 
     def _on_sell(self, daytime, sell_price, amount):
         try:
-            self.position.sell(sell_price, amount)
-            self.trade_history.append((daytime, sell_price, amount, "S"))
-            if self.position.current_eth == 0:
-                self.cost = 0
-            else:
-                self.cost = (self.cost * (self.position.current_eth + amount) - amount * sell_price) / self.position.current_eth
+            # 分部卖出
+            # self.position.sell(sell_price, amount)
+            # self.trade_history.append((daytime, sell_price, amount, "S"))
+            # if self.position.current_eth == 0:
+            #     self.cost = 0
+            # 只考虑买入成本，如果考虑卖出降成本，则会降低收益率
+            # else:
+            #     self.cost = (self.cost * (self.position.current_eth + amount) - amount * sell_price) / self.position.current_eth
+
+            # 一次性卖出
+            self.position.sell(sell_price, self.position.current_eth)
+            self.trade_history.append((daytime, sell_price, self.position.current_eth, "S"))
+            self.cost = 0
+
             self.print_trade_result(daytime, sell_price, "S")
         except Exception as e:
             print(daytime, e)
@@ -60,6 +75,7 @@ class TippingPointStrategy(object):
             self.position.buy(buy_price, amount)
             self.trade_history.append((daytime, buy_price, amount, "B"))
             self.cost = (self.cost * (self.position.current_eth - amount) + amount * buy_price) / self.position.current_eth
+            self.last_buy_price = buy_price
             self.print_trade_result(daytime, buy_price, "B")
         except Exception as e:
             print(daytime, e)
@@ -67,8 +83,12 @@ class TippingPointStrategy(object):
 
     def _is_period_lowest(self, daytime, price, period):
         is_lowest = True
+        # yahoo data
         start_datetime = (datetime.datetime.strptime(daytime, "%Y-%m-%d") - datetime.timedelta(days=period)).strftime(
             "%Y-%m-%d")
+        # polygon data
+        # start_datetime = (datetime.datetime.strptime(daytime, "%Y-%m-%d %H:%M:%S") - datetime.timedelta(days=period)
+        #                   ).strftime("%Y-%m-%d %H:%M:%S")
         for d in self.data:
             current_daytime = d["datetime"]
             current_price = d["price"]
@@ -81,33 +101,75 @@ class TippingPointStrategy(object):
                 break
         return is_lowest
 
+    def _get_period_highest_price(self, daytime, period):
+        # yahoo data
+        start_datetime = (datetime.datetime.strptime(daytime, "%Y-%m-%d") - datetime.timedelta(days=period)).strftime(
+            "%Y-%m-%d")
+        # polygon data
+        # start_datetime = (datetime.datetime.strptime(daytime, "%Y-%m-%d %H:%M:%S") - datetime.timedelta(days=period)
+        #                   ).strftime("%Y-%m-%d %H:%M:%S")
+        highest_price = 0
+        for d in self.data:
+            current_daytime = d["datetime"]
+            current_price = d["price"]
+            if current_daytime < start_datetime:
+                continue
+            if current_daytime > daytime:
+                break
+            if highest_price < current_price:
+                highest_price = current_price
+        return highest_price
+
+
     def print_trade_result(self, daytime, price, trade_type):
         print("date: ", daytime, "trade price: ", price, "trade_type:", trade_type, self.position, "cost:", self.cost,
               "profit:", self.position.get_profit(price), "profit rate:", self.position.get_profit_rate(price))
 
     def main(self, period):
+        position_day_cnt = 0
+        buy_cnt = 0
+        sell_cnt = 0
+
+        # yahoo data
         for d in self.data[period:]:
+        # polygon data
+        # for d in self.data[period * 24:]:
+            if self.position.current_eth > 0:
+                position_day_cnt += 1
+
             daytime = d["datetime"]
             price = d["price"]
-            if self.position.current_eth > 0 and price > self.cost * 1.05:
+            if self.position.current_eth > 0 and price > self.cost * 1.1:
                 self._on_sell(daytime, price, self.trade_amount)
+                sell_cnt += 1
                 continue
 
             is_lowest = self._is_period_lowest(daytime, price, period)
             if not is_lowest:
                 continue
+            # 增加与这段时间高点价格的对比
+            highest_price = self._get_period_highest_price(daytime, period)
+            diff_rate = (price - highest_price) / highest_price
+            if diff_rate > -0.1:
+                continue
             if self.position.current_eth == 0:
                 self._on_buy(daytime, price, self.trade_amount)
+                buy_cnt += 1
+                print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
                 continue
-            if self.cost != 0:
-                decrease_rate = (price - self.cost) / self.cost
+            if self.last_buy_price != 0:
+                decrease_rate = (price - self.last_buy_price) / self.last_buy_price
                 if decrease_rate < -0.1:
                     self._on_buy(daytime, price, self.trade_amount)
+                    buy_cnt += 1
+                    print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
+        print("buy cnt:", buy_cnt, "sell cnt:", sell_cnt, "pos day:", position_day_cnt, "pos day rate:",
+              position_day_cnt / (len(self.data) - period))
 
 
 if __name__ == '__main__':
-    init_usd = 2000
-    trade_amount = 0.5
+    init_usd = 3000
+    trade_amount = 1
     trading_fee = 0.0006
     tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee)
 
