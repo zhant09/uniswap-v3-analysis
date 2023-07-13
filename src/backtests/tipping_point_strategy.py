@@ -21,8 +21,8 @@ from evaluation import sharpe_ratio
 
 class TippingPointStrategy(object):
 
-    # FILE_PATH = BASE_PATH + "/data/eth_usd_20230628.csv"
-    FILE_PATH = BASE_PATH + "/data/eth_usd_polygon_20230703.csv"
+    FILE_PATH = BASE_PATH + "/data/eth_usd_20230710.csv"
+    # FILE_PATH = BASE_PATH + "/data/eth_usd_polygon_20230703.csv"
 
     def __init__(self, init_usd, trade_amount, fee_rate, is_train=False, is_test=False):
         self.trade_amount = trade_amount
@@ -33,19 +33,24 @@ class TippingPointStrategy(object):
         self.cost = 0
 
     def _init_data(self, is_train, is_test):
-        train_start = "0000-00-00"
+        train_start = "2022-06-01"
         train_end = "2023-03-21"
         if is_train:
-            self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, train_start, train_end)
+            self.data = price_data_parser.parse_yahoo_data(self.FILE_PATH, train_start, train_end)
         elif is_test:
-            self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, train_end)
+            self.data = price_data_parser.parse_yahoo_data(self.FILE_PATH, train_end)
         else:
-            self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, train_start)
+            self.data = price_data_parser.parse_yahoo_data(self.FILE_PATH, train_start)
 
     def _on_sell(self, daytime, sell_price, amount):
         try:
             self.position.sell(sell_price, amount)
             self.trade_history.append((daytime, sell_price, amount, "S"))
+            if self.position.current_eth == 0:
+                self.cost = 0
+            else:
+                self.cost = (self.cost * (self.position.current_eth + amount) - amount * sell_price) / self.position.current_eth
+            self.print_trade_result(daytime, sell_price, "S")
         except Exception as e:
             print(daytime, e)
             return False
@@ -54,6 +59,8 @@ class TippingPointStrategy(object):
         try:
             self.position.buy(buy_price, amount)
             self.trade_history.append((daytime, buy_price, amount, "B"))
+            self.cost = (self.cost * (self.position.current_eth - amount) + amount * buy_price) / self.position.current_eth
+            self.print_trade_result(daytime, buy_price, "B")
         except Exception as e:
             print(daytime, e)
             return False
@@ -74,10 +81,35 @@ class TippingPointStrategy(object):
                 break
         return is_lowest
 
-    def on_trade(self, period):
+    def print_trade_result(self, daytime, price, trade_type):
+        print("date: ", daytime, "trade price: ", price, "trade_type:", trade_type, self.position, "cost:", self.cost,
+              "profit:", self.position.get_profit(price), "profit rate:", self.position.get_profit_rate(price))
+
+    def main(self, period):
         for d in self.data[period:]:
             daytime = d["datetime"]
             price = d["price"]
-            is_lowest = self._is_period_lowest(daytime, price, period)
-            if is_lowest:
+            if self.position.current_eth > 0 and price > self.cost * 1.05:
+                self._on_sell(daytime, price, self.trade_amount)
+                continue
 
+            is_lowest = self._is_period_lowest(daytime, price, period)
+            if not is_lowest:
+                continue
+            if self.position.current_eth == 0:
+                self._on_buy(daytime, price, self.trade_amount)
+                continue
+            if self.cost != 0:
+                decrease_rate = (price - self.cost) / self.cost
+                if decrease_rate < -0.1:
+                    self._on_buy(daytime, price, self.trade_amount)
+
+
+if __name__ == '__main__':
+    init_usd = 2000
+    trade_amount = 0.5
+    trading_fee = 0.0006
+    tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee)
+
+    period = 15
+    tipping_point_strategy.main(period)

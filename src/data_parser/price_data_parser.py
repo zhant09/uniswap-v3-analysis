@@ -3,12 +3,14 @@ import pandas as pd
 from utils import utils
 
 
-def parse_yahoo_data(file_path, start_datetime="0000-00-00"):
+def parse_yahoo_data(file_path, start_datetime="0000-00-00", end_datetime=None):
     df = pd.read_csv(file_path)
     records = df.to_dict("records")
     data = []
     for item in records:
-        if item["Date"] >= start_datetime:
+        datetime = item["Date"]
+        if (end_datetime is None and start_datetime <= datetime) or (
+                end_datetime is not None and start_datetime <= datetime <= end_datetime):
             item_dict = dict()
             item_dict["datetime"] = item["Date"]
             item_dict["price"] = float(item["Open"])
