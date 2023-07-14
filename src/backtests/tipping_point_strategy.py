@@ -64,6 +64,7 @@ class TippingPointStrategy(object):
             self.position.sell(sell_price, self.position.current_eth)
             self.trade_history.append((daytime, sell_price, self.position.current_eth, "S"))
             self.cost = 0
+            self.last_buy_price = 0
 
             self.print_trade_result(daytime, sell_price, "S")
         except Exception as e:
@@ -120,7 +121,6 @@ class TippingPointStrategy(object):
                 highest_price = current_price
         return highest_price
 
-
     def print_trade_result(self, daytime, price, trade_type):
         print("date: ", daytime, "trade price: ", price, "trade_type:", trade_type, self.position, "cost:", self.cost,
               "profit:", self.position.get_profit(price), "profit rate:", self.position.get_profit_rate(price))
@@ -144,31 +144,33 @@ class TippingPointStrategy(object):
                 sell_cnt += 1
                 continue
 
-            is_lowest = self._is_period_lowest(daytime, price, period)
-            if not is_lowest:
-                continue
-            # 增加与这段时间高点价格的对比
-            highest_price = self._get_period_highest_price(daytime, period)
-            diff_rate = (price - highest_price) / highest_price
-            if diff_rate > -0.1:
-                continue
-            if self.position.current_eth == 0:
-                self._on_buy(daytime, price, self.trade_amount)
-                buy_cnt += 1
-                print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
-                continue
             if self.last_buy_price != 0:
                 decrease_rate = (price - self.last_buy_price) / self.last_buy_price
                 if decrease_rate < -0.1:
                     self._on_buy(daytime, price, self.trade_amount)
                     buy_cnt += 1
-                    print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
+                continue
+
+            is_lowest = self._is_period_lowest(daytime, price, period)
+            if not is_lowest:
+                continue
+
+            # 增加与这段时间高点价格的对比
+            highest_price = self._get_period_highest_price(daytime, period)
+            diff_rate = (price - highest_price) / highest_price
+            if diff_rate > -0.1:
+                continue
+
+            self._on_buy(daytime, price, self.trade_amount)
+            buy_cnt += 1
+            print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
+
         print("buy cnt:", buy_cnt, "sell cnt:", sell_cnt, "pos day:", position_day_cnt, "pos day rate:",
               position_day_cnt / (len(self.data) - period))
 
 
 if __name__ == '__main__':
-    init_usd = 3000
+    init_usd = 2400
     trade_amount = 1
     trading_fee = 0.0006
     tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee)
