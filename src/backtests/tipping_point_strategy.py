@@ -67,7 +67,7 @@ class TippingPointStrategy(object):
             self.trade_history.append((daytime, sell_price, self.position.current_eth, "S"))
             self.cost = 0
             self.last_buy_price = 0
-            self.last_buy_value = 0
+            # self.last_buy_value = 0
 
             self.print_trade_result(daytime, sell_price, "S")
             max_drawdown_data = self.max_drawdown_list[-1]
@@ -83,7 +83,7 @@ class TippingPointStrategy(object):
             self.trade_history.append((daytime, buy_price, amount, "B"))
             self.cost = (self.cost * (self.position.current_eth - amount) + amount * buy_price) / self.position.current_eth
             self.last_buy_price = buy_price
-            self.last_buy_value = self.position.current_eth * self.cost + self.position.current_usd
+            # self.last_buy_value = self.position.current_eth * self.cost + self.position.current_usd
             self.print_trade_result(daytime, buy_price, "B")
         except Exception as e:
             print(daytime, e)
@@ -133,7 +133,8 @@ class TippingPointStrategy(object):
               "profit:", self.position.get_profit(price), "profit rate:", self.position.get_profit_rate(price))
 
     def calculate_drawdown(self, price):
-        return self.position.current_eth * price + self.position.current_usd - self.last_buy_value
+        return self.position.current_eth * price - self.position.current_eth * self.cost
+        # return self.position.current_eth * price + self.position.current_usd - self.last_buy_value
 
     def main(self, period):
         position_day_cnt = 0
@@ -156,7 +157,7 @@ class TippingPointStrategy(object):
                 if drawdown < max_drawdown:
                     max_drawdown = drawdown
                     max_drawdown_price = price
-                    max_drawdown_rate = max_drawdown / self.last_buy_value
+                    max_drawdown_rate = max_drawdown / (self.cost * self.position.current_eth)
 
                 if price > self.cost * 1.1:
                     self.max_drawdown_list.append((max_drawdown, max_drawdown_rate, max_drawdown_price))
@@ -186,7 +187,7 @@ class TippingPointStrategy(object):
 
             self._on_buy(daytime, price, self.trade_amount)
             buy_cnt += 1
-            print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
+            # print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
 
         print("buy cnt:", buy_cnt, "sell cnt:", sell_cnt, "pos day:", position_day_cnt, "pos day rate:",
               position_day_cnt / (len(self.data) - period))
