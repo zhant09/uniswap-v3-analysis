@@ -30,7 +30,9 @@ class TippingPointStrategy(object):
         self._init_data(is_train, is_test)
         self.position = Position(0, init_usd, self.fee_rate)
         self.trade_history = []  # (daytime, price, amount, "S"/"B")
+        self.max_drawdown_list = []
         self.cost = 0
+        self.last_buy_value = 0
         self.last_buy_price = 0
 
     def _init_data(self, is_train, is_test):
@@ -65,8 +67,12 @@ class TippingPointStrategy(object):
             self.trade_history.append((daytime, sell_price, self.position.current_eth, "S"))
             self.cost = 0
             self.last_buy_price = 0
+            self.last_buy_value = 0
 
             self.print_trade_result(daytime, sell_price, "S")
+            max_drawdown_data = self.max_drawdown_list[-1]
+            print("max drawdown:", max_drawdown_data[0], "max drawdown rate:", max_drawdown_data[1],
+                  "max drawdown price:", max_drawdown_data[2])
         except Exception as e:
             print(daytime, e)
             return False
@@ -77,6 +83,7 @@ class TippingPointStrategy(object):
             self.trade_history.append((daytime, buy_price, amount, "B"))
             self.cost = (self.cost * (self.position.current_eth - amount) + amount * buy_price) / self.position.current_eth
             self.last_buy_price = buy_price
+            self.last_buy_value = self.position.current_eth * self.cost + self.position.current_usd
             self.print_trade_result(daytime, buy_price, "B")
         except Exception as e:
             print(daytime, e)
@@ -125,24 +132,40 @@ class TippingPointStrategy(object):
         print("date: ", daytime, "trade price: ", price, "trade_type:", trade_type, self.position, "cost:", self.cost,
               "profit:", self.position.get_profit(price), "profit rate:", self.position.get_profit_rate(price))
 
+    def calculate_drawdown(self, price):
+        return self.position.current_eth * price + self.position.current_usd - self.last_buy_value
+
     def main(self, period):
         position_day_cnt = 0
         buy_cnt = 0
         sell_cnt = 0
 
         # yahoo data
+        max_drawdown = 0
+        max_drawdown_rate = 0
+        max_drawdown_price = 0
         for d in self.data[period:]:
         # polygon data
         # for d in self.data[period * 24:]:
-            if self.position.current_eth > 0:
-                position_day_cnt += 1
-
             daytime = d["datetime"]
             price = d["price"]
-            if self.position.current_eth > 0 and price > self.cost * 1.1:
-                self._on_sell(daytime, price, self.trade_amount)
-                sell_cnt += 1
-                continue
+
+            if self.position.current_eth > 0:
+                position_day_cnt += 1
+                drawdown = self.calculate_drawdown(price)
+                if drawdown < max_drawdown:
+                    max_drawdown = drawdown
+                    max_drawdown_price = price
+                    max_drawdown_rate = max_drawdown / self.last_buy_value
+
+                if price > self.cost * 1.1:
+                    self.max_drawdown_list.append((max_drawdown, max_drawdown_rate, max_drawdown_price))
+                    self._on_sell(daytime, price, self.trade_amount)
+                    sell_cnt += 1
+                    max_drawdown = 0
+                    max_drawdown_rate = 0
+                    max_drawdown_price = 0
+                    continue
 
             if self.last_buy_price != 0:
                 decrease_rate = (price - self.last_buy_price) / self.last_buy_price
@@ -167,10 +190,11 @@ class TippingPointStrategy(object):
 
         print("buy cnt:", buy_cnt, "sell cnt:", sell_cnt, "pos day:", position_day_cnt, "pos day rate:",
               position_day_cnt / (len(self.data) - period))
+        print(self.max_drawdown_list)
 
 
 if __name__ == '__main__':
-    init_usd = 2400
+    init_usd = 3000
     trade_amount = 1
     trading_fee = 0.0006
     tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee)
