@@ -12,7 +12,7 @@ class TradeType(Enum):
     REVERSE_SELL = 6
 
 
-class Trade(object):
+class UniswapTrade(object):
     def __init__(self, trade_type, timestamp, price, amount):
         self._trade_type = trade_type
         self._timestamp = timestamp
@@ -35,6 +35,31 @@ class Trade(object):
     @property
     def tick(self):
         return self._tick
+
+    @property
+    def amount(self):
+        return self._amount
+
+
+class Trade(object):
+
+    def __init__(self, type, time, price, amount):
+        self._type = type
+        self._time = time
+        self._price = price
+        self._amount = amount
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def time(self):
+        return self._time
+
+    @property
+    def price(self):
+        return self._price
 
     @property
     def amount(self):

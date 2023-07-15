@@ -2,20 +2,21 @@ import datetime
 
 from data_parser import price_data_parser
 from utils.config import BASE_PATH
-from position import Position
-from evaluation import sharpe_ratio
+from entity.position import Position
+from entity.uniswap_trade import Trade, TradeType
 
 """
 分析：
     对比上涨下跌，过去 30 天的高点并不能作为一个清晰的买入卖出点，很多都是在一个迅速上升的半山腰，但是买入点的迹象比较明显，
     过去 30 天的低点买入就是一个比较好的方案，甚至可以是过去 15 天的低点
-策略： todo
+策略： 
     买入: 
         1. 在一段时间价格最低时进行买入，买入一定比例；
         2. 如果价格进一步下跌，每下跌 10% 加仓一定比例；
+        3. 买入价格低是确定性赚钱 => 设定买入价格上限
     卖出:
         1. 如果价格上涨，基于当前成本进行计算，每盈利 10% 卖出一定比例的持仓
-        2. 简单考虑 => 由于买入价格够低，持仓直到满足盈利条件 
+        2. 简单考虑 => 由于买入价格够低，持仓直到满足盈利条件
 """
 
 
@@ -34,6 +35,8 @@ class TippingPointStrategy(object):
         self.trade_history = []  # (daytime, price, amount, "S"/"B")
         self.max_drawdown_list = []
         self.cost = 0
+        self.buy_cnt = 0
+        self.sell_cnt = 0
         self.last_buy_price = 0
 
     def _init_data(self, is_train, is_test):
@@ -65,10 +68,12 @@ class TippingPointStrategy(object):
 
             # 一次性卖出
             self.position.sell(sell_price, self.position.current_eth)
-            self.trade_history.append((daytime, sell_price, self.position.current_eth, "S"))
+            trade = Trade(TradeType.SELL, daytime, sell_price, self.position.current_eth)
+            self.trade_history.append(trade)
+            self.sell_cnt += 1
+
             self.cost = 0
             self.last_buy_price = 0
-
             self.print_trade_result(daytime, sell_price, "S")
             max_drawdown_data = self.max_drawdown_list[-1]
             print("max drawdown:", max_drawdown_data[0], "max drawdown rate:", max_drawdown_data[1],
@@ -80,8 +85,12 @@ class TippingPointStrategy(object):
     def _on_buy(self, daytime, buy_price, amount):
         try:
             self.position.buy(buy_price, amount)
-            self.trade_history.append((daytime, buy_price, amount, "B"))
-            self.cost = (self.cost * (self.position.current_eth - amount) + amount * buy_price) / self.position.current_eth
+            trade = Trade(TradeType.BUY, daytime, buy_price, self.position.current_eth)
+            self.trade_history.append(trade)
+            self.buy_cnt += 1
+
+            self.cost = (self.cost * (self.position.current_eth - amount) + amount * buy_price
+                         ) / self.position.current_eth
             self.last_buy_price = buy_price
             self.print_trade_result(daytime, buy_price, "B")
         except Exception as e:
@@ -139,9 +148,7 @@ class TippingPointStrategy(object):
         buy_cnt = 0
         sell_cnt = 0
 
-        max_drawdown = 0
-        max_drawdown_rate = 0
-        max_drawdown_price = 0
+        max_drawdown_tuple = (0, 0, 0) # drawdown, price, drawdown_rate
         # yahoo data
         # for d in self.data[period:]:
         # polygon data
@@ -158,19 +165,16 @@ class TippingPointStrategy(object):
                 position_day_cnt += 1
                 # 计算基于当前价格的回撤并判断最大回撤
                 drawdown = self.calculate_drawdown(price)
-                if drawdown < max_drawdown:
-                    max_drawdown = drawdown
-                    max_drawdown_price = price
-                    max_drawdown_rate = max_drawdown / (self.cost * self.position.current_eth)
+                if drawdown < max_drawdown_tuple[0]:
+                    max_drawdown_tuple = (drawdown, price, drawdown / (self.cost * self.position.current_eth))
 
                 # 如果当前价格高于成本价 10% 进行卖出
                 if price > self.cost * 1.1:
-                    self.max_drawdown_list.append((max_drawdown, max_drawdown_rate, max_drawdown_price))
+                    self.max_drawdown_list.append(max_drawdown_tuple)
                     self._on_sell(daytime, price, self.trade_amount)
                     sell_cnt += 1
-                    max_drawdown = 0
-                    max_drawdown_rate = 0
-                    max_drawdown_price = 0
+
+                    max_drawdown_tuple = (0, 0, 0)
                     continue
 
                 # 持仓情况下，之前已经买过，计算新价格是否满足继续买入的条件
@@ -187,8 +191,7 @@ class TippingPointStrategy(object):
                 continue
 
             # 如果与高点价格比较低于 10% 的变化或者价格高于购买价格上限，不进行买入
-            if diff_rate > -0.1:
-                    # or price >= self.BUY_LIMIT:
+            if diff_rate > -0.1 or price >= self.BUY_LIMIT:
                 print("Not buying, highest_price:", highest_price, "price:", price, "diff rate:", diff_rate, "day:",
                       daytime)
                 continue
@@ -202,7 +205,7 @@ class TippingPointStrategy(object):
         position_day_cnt /= 24
         print("buy cnt:", buy_cnt, "sell cnt:", sell_cnt, "pos day:", position_day_cnt, "pos day rate:",
               position_day_rate, "average pos day:", position_day_cnt / sell_cnt)
-        # print(self.max_drawdown_list)
+        return self.trade_history
 
 
 if __name__ == '__main__':
@@ -212,4 +215,5 @@ if __name__ == '__main__':
     tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee)
 
     period = 15
-    tipping_point_strategy.main(period)
+    trade_history = tipping_point_strategy.main(period)
+    print("trade history:", trade_history)

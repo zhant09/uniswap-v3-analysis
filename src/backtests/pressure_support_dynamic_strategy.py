@@ -2,7 +2,7 @@ import copy
 
 from data_parser import price_data_parser
 from utils.config import BASE_PATH
-from position import Position
+from entity.position import Position
 
 """
 caution: 

@@ -3,7 +3,7 @@ import pandas as pd
 from data_parser import exchange_log_parser
 from utils import utils, math_utils
 from utils.config import BASE_PATH
-from position import Position
+from entity.position import Position
 from trade import Trade, TradeType
 
 """
