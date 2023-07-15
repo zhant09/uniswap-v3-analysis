@@ -14,7 +14,7 @@ from evaluation import sharpe_ratio
         1. 在一段时间价格最低时进行买入，买入一定比例；
         2. 如果价格进一步下跌，每下跌 10% 加仓一定比例；
     卖出:
-        1. 如果价格上涨，基于当前成本进行计算，每盈利 5% 卖出一定比例的持仓
+        1. 如果价格上涨，基于当前成本进行计算，每盈利 10% 卖出一定比例的持仓
         2. 简单考虑 => 由于买入价格够低，持仓直到满足盈利条件 
 """
 
@@ -22,7 +22,9 @@ from evaluation import sharpe_ratio
 class TippingPointStrategy(object):
 
     # FILE_PATH = BASE_PATH + "/data/eth_usd_20230710.csv"
-    FILE_PATH = BASE_PATH + "/data/eth_usd_polygon_20230712.csv"
+    FILE_PATH = BASE_PATH + "/data/eth_usd_polygon_20230714.csv"
+
+    BUY_LIMIT = 1800
 
     def __init__(self, init_usd, trade_amount, fee_rate, is_train=False, is_test=False):
         self.trade_amount = trade_amount
@@ -147,14 +149,21 @@ class TippingPointStrategy(object):
             daytime = d["datetime"]
             price = d["price"]
 
+            # 同时计算与这段时间高点价格的对比
+            highest_price = self._get_period_highest_price(daytime, period)
+            diff_rate = (price - highest_price) / highest_price
+
+            # 当已经有持仓的时候
             if self.position.current_eth > 0:
                 position_day_cnt += 1
+                # 计算基于当前价格的回撤并判断最大回撤
                 drawdown = self.calculate_drawdown(price)
                 if drawdown < max_drawdown:
                     max_drawdown = drawdown
                     max_drawdown_price = price
                     max_drawdown_rate = max_drawdown / (self.cost * self.position.current_eth)
 
+                # 如果当前价格高于成本价 10% 进行卖出
                 if price > self.cost * 1.1:
                     self.max_drawdown_list.append((max_drawdown, max_drawdown_rate, max_drawdown_price))
                     self._on_sell(daytime, price, self.trade_amount)
@@ -164,30 +173,36 @@ class TippingPointStrategy(object):
                     max_drawdown_price = 0
                     continue
 
-            if self.last_buy_price != 0:
+                # 持仓情况下，之前已经买过，计算新价格是否满足继续买入的条件
                 decrease_rate = (price - self.last_buy_price) / self.last_buy_price
                 if decrease_rate < -0.1:
                     self._on_buy(daytime, price, self.trade_amount)
                     buy_cnt += 1
+                    print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
                 continue
 
+            # 未持仓情况下，计算是否是 period 期间最低价
             is_lowest = self._is_period_lowest(daytime, price, period)
             if not is_lowest:
                 continue
 
-            # 增加与这段时间高点价格的对比
-            highest_price = self._get_period_highest_price(daytime, period)
-            diff_rate = (price - highest_price) / highest_price
+            # 如果与高点价格比较低于 10% 的变化或者价格高于购买价格上限，不进行买入
             if diff_rate > -0.1:
+                    # or price >= self.BUY_LIMIT:
+                print("Not buying, highest_price:", highest_price, "price:", price, "diff rate:", diff_rate, "day:",
+                      daytime)
                 continue
 
             self._on_buy(daytime, price, self.trade_amount)
             buy_cnt += 1
-            # print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
+            print("highest_price:", highest_price, "price:", price, "diff rate:", diff_rate)
 
+        position_day_rate = position_day_cnt / len(self.data) - period
+        # ploygon data
+        position_day_cnt /= 24
         print("buy cnt:", buy_cnt, "sell cnt:", sell_cnt, "pos day:", position_day_cnt, "pos day rate:",
-              position_day_cnt / (len(self.data) - period))
-        print(self.max_drawdown_list)
+              position_day_rate, "average pos day:", position_day_cnt / sell_cnt)
+        # print(self.max_drawdown_list)
 
 
 if __name__ == '__main__':
