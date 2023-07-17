@@ -22,12 +22,11 @@ from entity.uniswap_trade import Trade, TradeType
 
 class TippingPointStrategy(object):
 
-    BUY_LIMIT = 1800
-
-    def __init__(self, init_usd, trade_amount, fee_rate, file_path, is_polygon_data):
+    def __init__(self, init_usd, trade_amount, fee_rate, file_path, is_polygon_data, buy_limit=None):
         self.trade_amount = trade_amount
         self.fee_rate = fee_rate
         self.is_polygon = is_polygon_data
+        self.buy_limit = buy_limit
 
         self._init_data(file_path)
         self.position = Position(0, init_usd, self.fee_rate)
@@ -65,8 +64,8 @@ class TippingPointStrategy(object):
             self.last_buy_price = 0
             self.print_trade_result(daytime, sell_price, "S")
             max_drawdown_data = self.max_drawdown_list[-1]
-            print("max drawdown:", max_drawdown_data[0], "max drawdown rate:", max_drawdown_data[1],
-                  "max drawdown price:", max_drawdown_data[2])
+            # print("max drawdown:", max_drawdown_data[0], "max drawdown rate:", max_drawdown_data[1],
+            #       "max drawdown price:", max_drawdown_data[2])
         except Exception as e:
             print(daytime, e)
             return False
@@ -185,7 +184,7 @@ class TippingPointStrategy(object):
                 continue
 
             # 如果与高点价格比较低于 10% 的变化或者价格高于购买价格上限，不进行买入
-            if diff_rate > -0.1 or price >= self.BUY_LIMIT:
+            if diff_rate > -0.1 or (self.buy_limit is not None and price >= self.buy_limit):
                 print("Not buying, highest_price:", highest_price, "price:", price, "diff rate:", diff_rate, "day:",
                       daytime)
                 continue
@@ -204,13 +203,14 @@ class TippingPointStrategy(object):
 
 
 if __name__ == '__main__':
-    filepath = BASE_PATH + "/data/eth_usd_20230710.csv"
-    # filepath = BASE_PATH + "/data/eth_usd_polygon_20230714.csv"
+    # filepath = BASE_PATH + "/data/eth_usd_20230710.csv"
+    filepath = BASE_PATH + "/data/eth_usd_polygon_20230714.csv"
 
     init_usd = 3000
-    trade_amount = 0.5
+    trade_amount = 1
     trading_fee = 0.0006
-    tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee, filepath, False)
+    buy_limit = 1800
+    tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee, filepath, False, buy_limit)
 
     period = 15
     trade_history = tipping_point_strategy.main(period)
