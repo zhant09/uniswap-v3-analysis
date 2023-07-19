@@ -179,3 +179,4 @@ tipping_point.ipynb
 # MAC
 .DS_Store
 
+/src/backtests/
