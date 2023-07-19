@@ -163,6 +163,8 @@ class TippingPointStrategy(object):
 
                 # 如果当前价格高于成本价 10% 进行卖出
                 if price > self.cost * 1.1:
+                # 如果当前价格高于成本价 100 刀进行卖出
+                # if price > self.cost + 105:
                     self.max_drawdown_list.append(max_drawdown_tuple)
                     self._on_sell(daytime, price, self.trade_amount)
                     sell_cnt += 1
@@ -210,7 +212,7 @@ if __name__ == '__main__':
     trade_amount = 1
     trading_fee = 0.0006
     buy_limit = 1800
-    tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee, filepath, False, buy_limit)
+    tipping_point_strategy = TippingPointStrategy(init_usd, trade_amount, trading_fee, filepath, True, buy_limit)
 
     period = 15
     trade_history = tipping_point_strategy.main(period)
