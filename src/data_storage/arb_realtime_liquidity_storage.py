@@ -215,25 +215,24 @@ def insert_into_db(insert_data):
     return insert_count
 
 
-def filter_data(insert_data):
+def filter_data(insert_data, token0_limit, token1_limit):
     logging.info("Filtering data, before filter: {} rows".format(len(insert_data)))
     remain_data = []
     for item in insert_data:
-        if item["locked_amount0"] > 1000 or item["locked_amount1"] > 1000:
+        if item["locked_amount0"] > token0_limit or item["locked_amount1"] > token1_limit:
             remain_data.append(item)
     logging.info("Filtering data, after filter: {} rows".format(len(remain_data)))
     return remain_data
 
 
-def main(pool_id, is_filter):
+def main(pool_id, token0_amount_filter, token1_amount_filter):
     dt = datetime.datetime.now()
     logging.info("Processing ARB pool {} at {}".format(pool_id, dt))
 
     pool_info = get_pool_info(pool_id)
     tick_mapping = get_tick_data(pool_info)
     insert_data = get_liquidity_data(dt, pool_info, tick_mapping)
-    if is_filter:
-        insert_data = filter_data(insert_data)
+    insert_data = filter_data(insert_data, token0_amount_filter, token1_amount_filter)
     insert_count = insert_into_db(insert_data)
     logging.info("Inserted {} rows".format(insert_count))
 
@@ -246,9 +245,15 @@ if __name__ == "__main__":
         required=True
     )
     parser.add_argument(
-        "--is_filter",
-        action=argparse.BooleanOptionalAction
+        '--token0_amount_filter',
+        type=float,
+        default=0.0
+    )
+    parser.add_argument(
+        '--token1_amount_filter',
+        type=float,
+        default=0.0
     )
 
     args = parser.parse_args()
-    main(args.pool_id, args.is_filter)
+    main(args.pool_id, args.token0_amount_filter, args.token1_amount_filter)
