@@ -125,7 +125,7 @@ def get_tick_data(pool_info):
     return tick_mapping
 
 
-def get_liquidity_data(dt: datetime, pool_info: PoolInfo, tick_mapping: dict):
+def get_liquidity_data(dt: datetime, pool_info: PoolInfo, tick_mapping: dict, token0_limit: float, token1_limit: float):
     # Start from zero; if we were iterating from the current tick, would start from the pool's total liquidity
     liquidity = 0
 
@@ -144,17 +144,6 @@ def get_liquidity_data(dt: datetime, pool_info: PoolInfo, tick_mapping: dict):
     tick = min_tick
     insert_data = []
     while tick <= max_tick:
-        line_dict = {
-            "pool_id": pool_info.pool_id,
-            "chain": "ARB",
-            "datetime": dt,
-            "fee_tier": pool_info.fee_tier,
-            "tick_spacing": pool_info.tick_spacing,
-            "token0": pool_info.token0,
-            "token1": pool_info.token1,
-            "decimals0": pool_info.decimals0,
-            "decimals1": pool_info.decimals1
-        }
         liquidity_delta = tick_mapping.get(tick, 0)
         liquidity += liquidity_delta
 
@@ -163,13 +152,6 @@ def get_liquidity_data(dt: datetime, pool_info: PoolInfo, tick_mapping: dict):
 
         bottom_price = tick_to_price(bottom_tick) / (10 ** (pool_info.decimals1 - pool_info.decimals0))
         top_price = tick_to_price(top_tick) / (10 ** (pool_info.decimals1 - pool_info.decimals0))
-
-        line_dict["bottom_tick"] = bottom_tick
-        line_dict["top_tick"] = top_tick
-        line_dict["liquidity_net"] = liquidity_delta
-        line_dict["liquidity"] = liquidity
-        line_dict["bottom_price"] = bottom_price
-        line_dict["top_price"] = top_price
 
         # Compute square roots of prices corresponding to the bottom and top ticks
         sa = tick_to_price(bottom_tick // 2)
@@ -194,10 +176,14 @@ def get_liquidity_data(dt: datetime, pool_info: PoolInfo, tick_mapping: dict):
             amount0 = amount1 / (sb * sa)
             locked_amount0 = amount0 / (10 ** pool_info.decimals0)
 
-        line_dict["locked_amount0"] = locked_amount0
-        line_dict["locked_amount1"] = locked_amount1
-        line_dict["is_current_tick"] = is_current_tick
-        insert_data.append(line_dict)
+        if locked_amount0 > token0_limit or locked_amount1 > token1_limit:
+            line_dict = {"pool_id": pool_info.pool_id, "chain": "ARB", "datetime": dt, "fee_tier": pool_info.fee_tier,
+                         "tick_spacing": pool_info.tick_spacing, "token0": pool_info.token0, "token1": pool_info.token1,
+                         "decimals0": pool_info.decimals0, "decimals1": pool_info.decimals1, "bottom_tick": bottom_tick,
+                         "top_tick": top_tick, "liquidity_net": liquidity_delta, "liquidity": liquidity,
+                         "bottom_price": bottom_price, "top_price": top_price, "locked_amount0": locked_amount0,
+                         "locked_amount1": locked_amount1, "is_current_tick": is_current_tick}
+            insert_data.append(line_dict)
 
         tick += pool_info.tick_spacing
 
@@ -215,14 +201,14 @@ def insert_into_db(insert_data):
     return insert_count
 
 
-def filter_data(insert_data, token0_limit, token1_limit):
-    logging.info("Filtering data, before filter: {} rows".format(len(insert_data)))
-    remain_data = []
-    for item in insert_data:
-        if item["locked_amount0"] > token0_limit or item["locked_amount1"] > token1_limit:
-            remain_data.append(item)
-    logging.info("Filtering data, after filter: {} rows".format(len(remain_data)))
-    return remain_data
+# def filter_data(insert_data, token0_limit, token1_limit):
+#     logging.info("Filtering data, before filter: {} rows".format(len(insert_data)))
+#     remain_data = []
+#     for item in insert_data:
+#         if item["locked_amount0"] > token0_limit or item["locked_amount1"] > token1_limit:
+#             remain_data.append(item)
+#     logging.info("Filtering data, after filter: {} rows".format(len(remain_data)))
+#     return remain_data
 
 
 def main(pool_id, token0_amount_filter, token1_amount_filter):
@@ -231,8 +217,8 @@ def main(pool_id, token0_amount_filter, token1_amount_filter):
 
     pool_info = get_pool_info(pool_id)
     tick_mapping = get_tick_data(pool_info)
-    insert_data = get_liquidity_data(dt, pool_info, tick_mapping)
-    insert_data = filter_data(insert_data, token0_amount_filter, token1_amount_filter)
+    insert_data = get_liquidity_data(dt, pool_info, tick_mapping, token0_amount_filter, token1_amount_filter)
+    # insert_data = filter_data(insert_data, token0_amount_filter, token1_amount_filter)
     insert_count = insert_into_db(insert_data)
     logging.info("Inserted {} rows".format(insert_count))
 
