@@ -180,3 +180,4 @@ tipping_point.ipynb
 .DS_Store
 
 /src/backtests/
+/notebooks/strategy/tipping_point_btc_eth.ipynb
