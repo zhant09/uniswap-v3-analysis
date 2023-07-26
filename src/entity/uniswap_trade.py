@@ -64,3 +64,7 @@ class Trade(object):
     @property
     def amount(self):
         return self._amount
+
+    def __str__(self):
+        return "trade_type: {}, datetime: {}, price: {}, amount: {}".format(self._type.name, self._time, self._price,
+                                                                            self._amount)

@@ -126,3 +126,7 @@ class GeneralPosition(object):
 
     def get_profit_rate(self, price):
         return self.get_profit(price) / (self._init_token1_amount + self._init_token0_amount * price)
+
+    def __str__(self):
+        return "current_{}: {}, current_{}: {}".format(self._token0, self._current_token0_amount, self._token1,
+                                                       self._current_token1_amount)
