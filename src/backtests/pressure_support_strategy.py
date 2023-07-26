@@ -21,11 +21,11 @@ class PressureSupportStrategy(object):
 
     def _init_data(self, is_train, is_test):
         if is_train:
-            self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, "2023-03-21", "2023-05-23")
+            self.data = price_data_parser.parse_hourly_data(self.FILE_PATH, "2023-03-21", "2023-05-23")
         elif is_test:
-            self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, "2023-05-23")
+            self.data = price_data_parser.parse_hourly_data(self.FILE_PATH, "2023-05-23")
         else:
-            self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, "2023-03-21")
+            self.data = price_data_parser.parse_hourly_data(self.FILE_PATH, "2023-03-21")
 
     def _on_sell(self, datetime, sell_price, amount):
         try:

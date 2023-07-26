@@ -30,7 +30,7 @@ class PressureSupportDynamicStrategy(object):
         self.trade_gap = trade_gap
         self.trade_amount = trade_amount
         self.fee_rate = fee_rate
-        self.data = price_data_parser.parse_polygon_data(self.FILE_PATH, "2023-03-21")
+        self.data = price_data_parser.parse_hourly_data(self.FILE_PATH, "2023-03-21")
         # self.data = price_data_parser.parse_yahoo_data(self.FILE_PATH, "2023-03-21")
         self._init_base(init_eth, init_usd)
         self.trade_history = []
