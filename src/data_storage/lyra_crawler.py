@@ -4,6 +4,8 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
+from utils.config import BASE_PATH
+
 
 class LyraCrawler(object):
 
@@ -29,13 +31,17 @@ class LyraCrawler(object):
         rows = table.find_elements(By.TAG_NAME, "tr")
 
         option_list = []
+        current_price = None
         for row in rows:
             row_str = row.text
+            if "ETH Price" in row_str:
+                current_price = self._str_to_float(row_str[12:])
+                continue
             if row_str and row_str[0] == '$':
                 temp_list = row_str.split("\n")
                 option_list.append((self._str_to_float(temp_list[0].strip("$")),
                                     self._str_to_float(temp_list[-1].strip("$"))))
-        return option_list
+        return option_list, current_price
 
     def traverse_option(self):
         buy_button = self.driver.find_element(By.XPATH, '//button[normalize-space()="Buy"]')
@@ -47,19 +53,27 @@ class LyraCrawler(object):
 
         buy_button.click()
         call_button.click()
-        option_dict["buy_call"] = self.get_option_data()
+        option_list, current_price = self.get_option_data()
+        option_dict["buy_call"] = option_list
+        option_dict["buy_call_price"] = current_price
 
         buy_button.click()
         put_button.click()
-        option_dict["buy_put"] = self.get_option_data()
+        option_list, current_price = self.get_option_data()
+        option_dict["buy_put"] = option_list
+        option_dict["buy_put_price"] = current_price
 
         sell_button.click()
         call_button.click()
-        option_dict["sell_call"] = self.get_option_data()
+        option_list, current_price = self.get_option_data()
+        option_dict["sell_call"] = option_list
+        option_dict["sell_call_price"] = current_price
 
         sell_button.click()
         put_button.click()
-        option_dict["sell_put"] = self.get_option_data()
+        option_list, current_price = self.get_option_data()
+        option_dict["sell_put"] = option_list
+        option_dict["sell_put_price"] = current_price
         return option_dict
 
     def _convert_date(self, date_str):
@@ -84,7 +98,6 @@ class LyraCrawler(object):
                 break
         return date_button
 
-    # todo: add current price
     def traverse_date(self):
         # date_button = self._get_date_button()
         # date_button.click()
@@ -104,20 +117,27 @@ class LyraCrawler(object):
         for date_str in option_date_list:
             date_button = self._get_date_button()
             date_button.click()
-            time.sleep(5) # may reduce time
+            time.sleep(2) # may reduce time
             all_lis = self.driver.find_elements(By.CSS_SELECTOR, 'li')
             for li in all_lis:
                 if date_str in li.text:
                     li.click()
                     result_dict[date_str] = self.traverse_option()
-                    print(date_str, result_dict[date_str])
                     break
 
         self.driver.close()
         return result_dict
 
+    def main(self):
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        result_dict = self.traverse_date()
+
+        file_path = BASE_PATH + "/data/lyra_option_data.json"
+        with open(file_path, "a") as wf:
+            wf.write(current_time + "\n")
+            wf.write(str(result_dict) + "\n")
+
 
 if __name__ == "__main__":
     lyra_crawler = LyraCrawler()
-    result = lyra_crawler.traverse_date()
-    # print(result)
+    lyra_crawler.main()
